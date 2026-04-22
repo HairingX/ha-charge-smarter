@@ -1,0 +1,13 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Set up ChargeSmarter",
+                "description": "Configuration options will be added as features land. Click Submit to create the integration entry."
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "Only a single instance of ChargeSmarter is currently supported."
+        }
+    }
+}

@@ -1,0 +1,6 @@
+colorlog~=6.8
+homeassistant~=2026.4.0
+pip~=25.2
+
+#to upgrade existing venv, run the follwing in the terminal (followed by 2 restarts of HA):
+#          pip install --upgrade --force-reinstall -r requirements.txt

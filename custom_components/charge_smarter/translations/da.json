@@ -1,0 +1,13 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Opsæt ChargeSmarter",
+                "description": "Konfigurationsmuligheder tilføjes efterhånden som funktionerne kommer på plads. Klik Send for at oprette integrationen."
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "Kun én instans af ChargeSmarter understøttes p.t."
+        }
+    }
+}

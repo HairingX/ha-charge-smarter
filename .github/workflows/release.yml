@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release_zip_file:
+    name: Prepare release asset
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update manifest.json version
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version "$TAG_NAME" --path /custom_components/charge_smarter/
+      - name: Commit manifest update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ./custom_components/charge_smarter/manifest.json
+          git commit -m "Updated manifest.json"
+          git push origin HEAD:main
+      - name: Create zip
+        run: |
+          cd custom_components/charge_smarter
+          zip charge_smarter.zip -r ./ -x "test_*" -x "__pycache__/*" -x "*.pyc"
+      - name: Upload zip to release
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./custom_components/charge_smarter/charge_smarter.zip
+          asset_name: charge_smarter.zip
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
