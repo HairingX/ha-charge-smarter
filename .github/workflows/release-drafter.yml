@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create Release
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@v7
         with:
           disable-releaser: ${{ github.event_name == 'pull_request' }}
           disable-autolabeler: ${{ github.event_name == 'push' }}
