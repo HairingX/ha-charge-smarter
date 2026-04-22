@@ -1,4 +1,4 @@
-colorlog~=6.8
+colorlog~=6.10
 homeassistant~=2026.4.0
 pip~=25.2
 
