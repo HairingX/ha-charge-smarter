@@ -29,3 +29,6 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # Brand assets not yet registered in home-assistant/brands.
+          # Remove this ignore once a brands PR is merged.
+          ignore: brands
