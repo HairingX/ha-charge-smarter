@@ -1,0 +1,153 @@
+# The integration is a scaffold: it sets up an entry and runs an empty orchestration loop, with no
+# entities, no actions and no connection of its own. Rules that apply to what it does not do yet
+# are todo, with what will meet them.
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: The integration registers no service actions.
+  appropriate-polling:
+    status: todo
+    comment: The orchestration loop runs once a minute and does nothing yet; its rate is set when it decides.
+  brands:
+    status: todo
+    comment: No icon or logo yet.
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency: done
+  docs-actions:
+    status: exempt
+    comment: The integration registers no service actions.
+  docs-conditions:
+    status: exempt
+    comment: The integration provides no conditions.
+  docs-high-level-description: done
+  docs-installation-instructions:
+    status: todo
+    comment: Written once the integration does something to install it for.
+  docs-removal-instructions:
+    status: todo
+    comment: Written with the installation instructions.
+  docs-triggers:
+    status: exempt
+    comment: The integration provides no triggers.
+  entity-event-setup:
+    status: exempt
+    comment: The integration has no entities yet.
+  entity-unique-id:
+    status: exempt
+    comment: The integration has no entities yet.
+  has-entity-name:
+    status: exempt
+    comment: The integration has no entities yet.
+  runtime-data:
+    status: todo
+    comment: The coordinator is not yet started by the entry; it goes into runtime_data when it is.
+  test-before-configure:
+    status: exempt
+    comment: There is nothing to connect to; it composes other integrations' entities.
+  test-before-setup:
+    status: exempt
+    comment: There is nothing to connect to; it composes other integrations' entities.
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions:
+    status: exempt
+    comment: The integration registers no service actions.
+  config-entry-unloading: done
+  docs-configuration-parameters:
+    status: exempt
+    comment: The integration has no options yet.
+  docs-installation-parameters:
+    status: exempt
+    comment: Setting up asks for nothing yet.
+  entity-unavailable:
+    status: exempt
+    comment: The integration has no entities yet.
+  integration-owner: done
+  log-when-unavailable:
+    status: exempt
+    comment: There is nothing that can become unavailable yet.
+  parallel-updates:
+    status: exempt
+    comment: The integration has no platforms yet.
+  reauthentication-flow:
+    status: exempt
+    comment: The integration holds no credentials.
+  test-coverage: done
+
+  # Gold
+  devices:
+    status: exempt
+    comment: The integration creates no devices yet.
+  diagnostics:
+    status: todo
+    comment: Added with the first charging decision, which is what is worth diagnosing.
+  discovery-update-info:
+    status: exempt
+    comment: There is no device to discover.
+  discovery:
+    status: exempt
+    comment: There is no device to discover.
+  docs-data-update:
+    status: todo
+    comment: Written once the loop decides something.
+  docs-examples:
+    status: todo
+    comment: Written once there is something to show.
+  docs-known-limitations:
+    status: todo
+    comment: Written with the first feature.
+  docs-supported-devices:
+    status: todo
+    comment: The chargers it works through are listed with the first adapter.
+  docs-supported-functions:
+    status: todo
+    comment: Written with the first feature.
+  docs-troubleshooting:
+    status: todo
+    comment: Written with the first feature.
+  docs-use-cases:
+    status: todo
+    comment: Written with the first feature.
+  dynamic-devices:
+    status: exempt
+    comment: The integration creates no devices yet.
+  entity-category:
+    status: exempt
+    comment: The integration has no entities yet.
+  entity-device-class:
+    status: exempt
+    comment: The integration has no entities yet.
+  entity-disabled-by-default:
+    status: exempt
+    comment: The integration has no entities yet.
+  entity-translations:
+    status: exempt
+    comment: The integration has no entities yet.
+  exception-translations:
+    status: todo
+    comment: The integration raises no errors of its own yet.
+  icon-translations:
+    status: exempt
+    comment: The integration has no entities yet.
+  reconfiguration-flow:
+    status: exempt
+    comment: Setting up asks for nothing yet.
+  repair-issues:
+    status: exempt
+    comment: There is nothing a user could repair yet.
+  stale-devices:
+    status: exempt
+    comment: The integration creates no devices yet.
+
+  # Platinum
+  async-dependency:
+    status: exempt
+    comment: The integration has no dependency.
+  inject-websession:
+    status: exempt
+    comment: The integration makes no web requests.
+  strict-typing: done

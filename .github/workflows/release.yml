@@ -1,43 +1,52 @@
 name: Release
 
+# Run this from the Actions tab, on main, once the maintainer has approved the draft release and
+# its version. Never publish the draft release by hand: HACS installs the zip a release carries,
+# which only this workflow builds.
+#
+# The workflows and the tools are shared by every integration of the owner, from
+# HairingX/ha_integration_workflows; this file is a copy of its template and is checked to stay so.
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: >-
+          What to release. The version is worked out from the tags and the draft release: the
+          next release candidate, or the final release that ends the series.
+        required: true
+        type: choice
+        options:
+          - release candidate
+          - final release
+        default: release candidate
+      version:
+        description: >-
+          Override, only for a new major version, which is never worked out, or when the version
+          worked out is wrong: canonical PEP 440 without a v, such as 1.0.0 or 1.0.0rc1, of the
+          kind chosen above. It must still be higher than every version released.
+        required: false
+        type: string
+
+permissions: {}
+
+# GitHub keeps one waiting run per group: a third dispatch cancels the one waiting.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# The shell given explicitly, so GitHub runs every step with pipefail.
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  release_zip_file:
-    name: Prepare release asset
-    runs-on: ubuntu-latest
+  release:
+    name: Release
     permissions:
       contents: write
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
-      - name: Update manifest.json version
-        env:
-          TAG_NAME: ${{ github.event.release.tag_name }}
-        run: |
-          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version "$TAG_NAME" --path /custom_components/charge_smarter/
-      - name: Commit manifest update
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add ./custom_components/charge_smarter/manifest.json
-          git commit -m "Updated manifest.json"
-          git push origin HEAD:main
-      - name: Create zip
-        run: |
-          cd custom_components/charge_smarter
-          zip charge_smarter.zip -r ./ -x "test_*" -x "__pycache__/*" -x "*.pyc"
-      - name: Upload zip to release
-        env:
-          TAG_NAME: ${{ github.event.release.tag_name }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./custom_components/charge_smarter/charge_smarter.zip
-          asset_name: charge_smarter.zip
-          tag: ${{ env.TAG_NAME }}
-          overwrite: true
+      pull-requests: read
+      actions: read
+    uses: HairingX/ha_integration_workflows/.github/workflows/release.yml@v1
+    with:
+      release: ${{ inputs.release }}
+      version: ${{ inputs.version }}
