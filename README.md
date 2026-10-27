@@ -16,7 +16,17 @@ Advanced EV charging orchestration for Home Assistant.
 
 ## Installation
 
-Not yet available. HACS installation instructions will be added once the integration reaches a usable state.
+Through HACS, as a custom repository:
+
+1. In HACS, add `https://github.com/HairingX/ha-charge-smarter` as a custom repository of the
+   type Integration.
+2. Install ChargeSmarter, and restart Home Assistant.
+3. Add the integration under Settings -> Devices & services.
+
+It is a scaffold: it sets up, but does nothing yet.
+
+To remove it, delete the integration under Settings -> Devices & services, then remove it in
+HACS and restart Home Assistant.
 
 ## Development
 
