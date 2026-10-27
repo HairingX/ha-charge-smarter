@@ -20,17 +20,21 @@ Not yet available. HACS installation instructions will be added once the integra
 
 ## Development
 
-Open the repository in a VS Code dev container. Home Assistant runs on port 8123 (mapped to 1337 in the dev container).
+Open the repository in a VS Code dev container, which installs what `requirements-test.txt`
+pins. Home Assistant runs with the integration on port 8123 (1338 in the dev container):
 
 ```bash
 scripts/develop.sh
 ```
 
-Run tests:
+The tests, the type check and the shared checks:
 
 ```bash
-python -m unittest discover -v -s ./custom_components/charge_smarter/charge_smarter -p "test_*.py"
+pyright
+python -m pytest --cov=custom_components.charge_smarter --cov-fail-under=100
 ```
+
+Releases are made by the Release workflow; see `CLAUDE.md`.
 
 ## License
 

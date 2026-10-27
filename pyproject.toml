@@ -1,0 +1,23 @@
+# Not a package: Home Assistant loads the integration from custom_components/. This file holds
+# the settings of the tools the repository is checked with.
+
+[tool.pytest.ini_options]
+# pytest-homeassistant-custom-component runs every async test in Home Assistant's own loop.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = ["live: needs a real charger; skipped unless one is configured"]
+
+[tool.pyright]
+# The standard belongs to the repository, not to a personal editor setting: an IDE and a CI
+# run must agree on what counts as an error.
+include = ["custom_components", "tests"]
+exclude = ["**/__pycache__", "**/.venv"]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = "none"
+
+[tool.ha-integration-workflows]
+# Developed alongside this integration, in the order they are installed: a development branch is
+# tested and test-built with their branch of the same name, where they have one. The charging
+# logic is still part of the integration.
+libraries = []
