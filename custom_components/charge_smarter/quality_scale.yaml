@@ -10,8 +10,8 @@ rules:
     status: todo
     comment: The orchestration loop runs once a minute and does nothing yet; its rate is set when it decides.
   brands:
-    status: todo
-    comment: No icon or logo yet.
+    status: done
+    comment: Its own icon and logo, shipped in brand/, which Home Assistant serves for custom integrations.
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done
