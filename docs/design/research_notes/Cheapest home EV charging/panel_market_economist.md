@@ -473,7 +473,7 @@ come from different periods or definitions, and they reconcile at the source.
 ### Cited Findings
 - **Negative prices.**
   - The notes give three figures:
-    - 6.3 % of DK1 hours negative, Jan–Sep 2025, spot (`scheduling_algorithm.md` §0);
+    - 6.3 % of DK1 hours negative, Jan–Sep 2025, spot (`scheduling_algorithm.md`, harness description at the top);
     - 2.5 % of DK1 quarter hours, Oct 2025 – Oct 2026 (`price_composition_denmark.md` §4);
     - 2.7 % of hours ≤ 0 (`price_forecast_uncertainty.md` §4).
   - They are consistent once period and definition are matched: Norlys counts 274 negative hours
