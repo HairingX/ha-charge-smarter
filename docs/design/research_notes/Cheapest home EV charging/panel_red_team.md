@@ -537,14 +537,15 @@ forecast note states that "nothing was logged before this task".
 ### Takeaway
 Of 28 claims audited:
 
-| Verdict | Count |
-|---|---|
-| Confirmed at source or by re-run | 16 |
-| Confirmed as computed but overstated as evidence | 4 |
-| Overstated | 3 |
-| Misread | 3 |
-| Unsupported | 1 |
-| Partly could not re-open | 1 |
+| Verdict | Count | Rows |
+|---|---|---|
+| Confirmed at source or by re-run | 14 | 1–5, 7, 13, 15, 17, 21, 22, 24, 25, 28 |
+| Confirmed in part, the rest could not be re-opened | 2 | 19, 23 |
+| Confirmed as computed but overstated as evidence | 4 | 6, 8, 9, 12 |
+| Overstated | 3 | 10, 16, 20 |
+| Misread | 3 | 11, 26, 27 |
+| Reproduced but misapplied to Denmark | 1 | 14 |
+| Unsupported | 1 | 18 |
 
 The decisions most affected are D22 (the evidence for replacing it is weaker than stated), D20/O4
 (no markup number is supported) and O1 (unsettled by evidence). D10, D13, D25 and the O7 lean
