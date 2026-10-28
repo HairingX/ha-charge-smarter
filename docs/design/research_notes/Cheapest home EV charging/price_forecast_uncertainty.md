@@ -342,7 +342,7 @@ evidence for a markup's size.
 - Smith & Winkler: only the abstract read. The Bayesian correction's form for this problem
   is not worked out.
 
-## 6. What this means for D20, O4 and S1
+## 6. What this means for D20, O4, O1 and S1
 
 ### Takeaway
 - D20's principle stands: no markup on published prices, a markup on forecasts, costs on raw
@@ -354,6 +354,13 @@ evidence for a markup's size.
   MAE terms.
 - Defaults can be bounded by the evidence. Calibrating them needs a longer forecast archive,
   which now exists (elpriser.org, from 2026-10-06).
+- Revised after the trend test (section 7). Forecasts rank the coming days well even though
+  their levels are off. So forecast hours should stay in the ranking with a *small* markup:
+  about 0.3–0.6× the first-forecast-day MAE, roughly 50–100 DKK/MWh on DK spot, never above
+  about one MAE. The earlier ≈1× MAE is too high.
+- O1: the evidence favours charging beyond the floors only when the coming days are forecast
+  dearer than now by more than the markup (a next-cheaper-day rule). It does not favour a fixed
+  price threshold or a percentile. A separate trend switch is not needed.
 
 ### Cited Findings
 - **D20, known prices carry no markup.** Supported: published day-ahead prices are final and published around 13:00 CET ([Lund thesis](https://lup.lub.lu.se/student-papers/record/9244798/file/9244801.pdf); [ing.dk](https://ing.dk/artikel/podcast-saadan-laver-man-detaljeret-prognose-de-kommende-dages-elpriser-265746)). elpriser.org: "Days 0-1 are published prices, not modelled" ([model card](https://huggingface.co/Elpriser/denmark-price-forecast)).
@@ -370,14 +377,16 @@ evidence for a markup's size.
 - Reasoning, a proposed default for O4 that is consistent with the sources but not
   calibrated:
   - Markup 0 for published prices.
-  - From the first forecast hour, an additive premium about equal to the measured
-    selection bias. For DK1 spot in DKK this was ≈ 0.12–0.16 DKK/kWh in October 2026, or
-    13–16 % of that month's mean price, used as an absolute amount and not as a percentage.
+  - From the first forecast hour, an additive premium. First version: about equal to the
+    measured selection bias, ≈ 0.12–0.16 DKK/kWh on DK1 spot in October 2026, or 13–16 %
+    of that month's mean price, used as an absolute amount and not as a percentage.
+    **Revised in section 7:** the simulation tolerated 0–100 DKK/MWh and was hurt at 300, so
+    start lower, at ≈ 0.05–0.10 DKK/kWh.
   - Rising by about a quarter to a third over the following week, then flat beyond 7 days.
 
   Expressed against MAE, the published elpriser MAE at D+2 (149 DKK/MWh DK1) is about the
-  same size as the measured bias. A first step of about 1× the first-day MAE, rising to about
-  1.3× at D+7, is the shape the numbers point to. Treat these as starting values for a
+  same size as the measured bias. A first step of about 0.3–0.6× the first-day MAE (revised down from 1× after section 7),
+  rising to about 1.3× that value at D+7, is the shape the numbers point to. Treat these as starting values for a
   calibration run, not as findings.
 - Reasoning: since D3 forbids units in the engine, the default is best stated relative to the
   call's own prices (for example, a fraction of the mean absolute deviation of the known
@@ -399,3 +408,219 @@ evidence for a markup's size.
 - Carnot accuracy, the forecast most Danish HA users have: unknown.
 - Whether the premium should depend on the deadline's slack (a looser deadline tolerates more
   risk): no source found. This touches D9 and D22.
+
+## 7. Trend direction: does the forecast get the direction of the coming days right?
+
+Added at the maintainer's challenge. From long use, he finds that Danish forecasts get the trend
+of the next ~6 days right even when hourly levels are off, and he uses them as a rising/falling
+signal. Tested on 2026-10-28/29.
+
+### Takeaway
+In the data available, the maintainer's claim holds, and it is compatible with sections 2–5:
+- Levels are off by ~25–35 %, but the forecast ranks the coming days well.
+- It calls the direction of a day versus the last known day right in 73–100 % (DK1) and
+  59–90 % (DK2) of cases at D+2..D+7, against about 50–70 % for naive baselines.
+- It picks the actual cheapest of the next 6 days 50–71 % of the time, against 17 % by chance.
+- Direction is reliable only when the forecast move is large, above roughly 200–300 DKK/MWh.
+  Below 100 DKK/MWh it is a coin flip.
+
+In a simple simulation with a 50 kWh battery, acting on the forecast's *day ranking*
+recovered 91–97 % of perfect-foresight savings (80–88 % with 30 kWh). A binary
+"trend up → fill now" switch recovered 73–80 % (62–71 % with 30 kWh).
+
+**The sample is tiny**:
+- 23 forecast runs (issued 2026-10-06 to 2026-10-28) and 22–24 actual days;
+- overlapping runs;
+- one autumn month dominated by two windy low-price episodes (DK1 daily means 370 on 10-10
+  and 79 on 10-25, against 1,000–1,500 on most days).
+
+It supports the direction of the claim; it does not calibrate any threshold.
+
+### Cited Findings
+- **Data and method (measured here).**
+  - Forecasts: the elpriser.org archive, 23 runs per area ([API spec](https://elpriser.org/api/openapi.json); `https://elpriser.org/api/forecast/archive?area=DK1&issued=…`).
+  - Each run is generated around 12:13 UTC, after the day-ahead auction, so the issue day D and D+1 are published. The forecasts cover D+2..D+9.
+  - Actuals: Energi Data Service `DayAheadPrices`, refetched 2026-10-29 to include prices through 2026-10-29, as daily means of the quarter-hours.
+- **My own captured forecasts:** none exist; nothing was logged before this task. **Carnot:** could not get; the API needs a personal key (see section 1). So only one provider is tested.
+- **Day-by-day volatility in the sample** (measured here). Mean |day-to-day change| of the daily mean was 344 DKK/MWh (DK1) and 329 (DK2). The daily means for DK1, 6–29 Oct:
+
+  | | | | | | | | |
+  |---|---|---|---|---|---|---|---|
+  | 06: 1504 | 07: 1442 | 08: 985 | 09: 630 | 10: 370 | 11: 950 | 12: 1470 | 13: 1047 |
+  | 14: 1209 | 15: 1228 | 16: 1566 | 17: 1144 | 18: 1212 | 19: 1550 | 20: 1340 | 21: 1482 |
+  | 22: 1106 | 23: 1013 | 24: 253 | 25: 79 | 26: 682 | 27: 690 | 28: 1558 | 29: 2224 |
+
+  DK2 follows closely.
+
+#### 7.1 Direction hit rate, each day versus the last known day (D+1)
+
+"Hit" means sign(forecast mean D+k − actual mean D+1) equals sign(actual D+k − actual D+1).
+The baseline "weekday last week" uses actual(D+k−7) as the forecast. The Pesaran-Timmermann
+(PT) statistic tests against independent signs; a value above 1.645 rejects independence at the
+5 % level, one-sided, *if* the observations were independent, which overlapping runs are not.
+Measured here.
+
+| Horizon | n | DK1 forecast | DK1 last week | DK1 PT | DK2 forecast | DK2 last week | DK2 PT | Share of actual rises (DK1) |
+|---|---|---|---|---|---|---|---|---|
+| D+2 | 22 | 73 % | 50 % | 2.24 | 59 % | 50 % | 1.11 | 55 % |
+| D+3 | 21 | 81 % | 62 % | 3.17 | 71 % | 62 % | 2.57 | 52 % |
+| D+4 | 20 | 100 % | 65 % | 4.59 | 90 % | 70 % | 3.72 | 45 % |
+| D+5 | 19 | 74 % | 63 % | 2.11 | 74 % | 68 % | 2.27 | 58 % |
+| D+6 | 18 | 89 % | 56 % | 3.49 | 67 % | 56 % | 2.16 | 56 % |
+| D+7 | 17 | 82 % | 65 % | 2.96 | 76 % | 65 % | 2.59 | 53 % |
+| Mean of D+2..D+7 vs D+1 | 17 | 82 % | 59 % | 2.82 | 76 % | 59 % | 2.35 | — |
+
+#### 7.2 Direction against the issue day D ("relative to today")
+
+Same method, with D as the reference (measured here).
+- The forecast hit rate at D+2..D+9 was:
+  - DK1: 100, 100, 80, 74, 83, 82, 81, 67 %;
+  - DK2: 82, 86, 85, 68, 67, 71, 75, 67 %.
+- D+1 is published, so it is always right.
+- Baselines:
+  - **Momentum** (the known change D→D+1 continues): 82, 76, 70, 58, 61, 47, 56, 40 % (DK1). It decays to coin-flip by D+5.
+  - **Weekday last week**: 47–67 %.
+- The mean over D+1..D+6 versus D: forecast 83 % (DK1) and 78 % (DK2), weekday last week 61 %.
+- Pure persistence ("tomorrow = today") predicts no change, so it has no direction and gives no
+  baseline. Momentum stands in for it.
+
+#### 7.3 Hit rate by the size of the forecast move
+
+All runs and horizons D+2..D+9 pooled, against D+1, in DKK/MWh (measured here):
+
+| Forecast move | DK1 hit rate | DK2 hit rate |
+|---|---|---|
+| < 100 | 52 % (n=25) | 45 % (n=22) |
+| 100–200 | 67 % (n=21) | 36 % (n=14) |
+| 200–300 | 89 % (n=19) | 59 % (n=17) |
+| ≥ 300 | 93 % (n=83) | 87 % (n=95) |
+
+Against D the pattern is the same (DK1 67 / 70 / 79 / 95 %; DK2 47 / 42 / 69 / 86 %).
+
+#### 7.4 Ranking and the cheapest day over the next 6 days (measured here)
+
+| | DK1, D+1..D+6 (D+1 known) | DK1, D+2..D+7 | DK2, D+1..D+6 | DK2, D+2..D+7 |
+|---|---|---|---|---|
+| Runs | 18 | 17 | 18 | 17 |
+| Spearman, forecast vs actual daily means (mean / median) | 0.79 / 0.80 | 0.79 / 0.83 | 0.70 / 0.74 | 0.72 / 0.77 |
+| Spearman, weekday-last-week baseline | −0.03 | 0.00 | 0.02 | 0.06 |
+| Forecast picks the actual cheapest day | 67 % | 71 % | 50 % | 65 % |
+| Weekday last week picks it | 17 % | 18 % | 17 % | 18 % |
+| Picked day within 50 / 100 / 200 DKK/MWh of the cheapest | 67 / 83 / 94 % | 76 / 88 / 94 % | 61 / 67 / 83 % | 76 / 82 / 88 % |
+| Mean regret of the forecast pick (median) | 68 (0) | 58 (0) | 110 (0) | 82 (0) |
+| Mean regret of the weekday-last-week pick | 566 | 536 | 570 | 541 |
+
+Chance of picking the cheapest at random is 17 %.
+
+#### 7.5 Literature on directional accuracy
+- The elpriser.org v3 backtest reports a "Min-hour hit-rate (cheapest hour in predicted top-3)" of 69.0 % (DK1) and 70.0 % (DK2) — [model card](https://huggingface.co/Elpriser/denmark-price-forecast). This is the only published Danish ranking-type accuracy found.
+- The Volvo/Lund SE3 study: "the broader price pattern remains clear over the first two to four days". Ranking days by the median forecast (λ = 0) was near-optimal in 3 of 4 setups — [Kjellergren & Lindqvist Sabel 2026](https://lup.lub.lu.se/student-papers/record/9244798/file/9244801.pdf).
+- **Kath & Ziel (German quarter-hourly markets).** They use Directional Accuracy (share of correct up/down calls) and the Pesaran-Timmermann test: "the tests suggest a promising rate of correctness but do not allow us to reject the null hypothesis of autonomous directional errors". They note that a hit rate above 50 % yields economic benefit only "if the losses of an incorrect prediction and the gains of a correct one are equally distributed". Directional accuracy declined in peak quarter-hours — [Kath & Ziel, arXiv:1811.08604](https://arxiv.org/abs/1811.08604) (PDF read). Their directions are between two intraday markets, not across days.
+- **Australian NEM, 24 h and 48 h horizons.** They report mean directional accuracy (MDA, step-to-step sign of change). Examples in QLD: CNN-LSTM 66.2 % (24 h) and 65.6 % (48 h); DLinear 54.6 % and 54.0 %. "directional accuracy deteriorates sharply during abrupt shifts in price direction" — [Gani et al., arXiv:2602.01157](https://arxiv.org/abs/2602.01157) (PDF read). This is intraday step direction, not day-level trend.
+- **Not found:** a published study of *day-level* direction accuracy at 2–7 days for Nordic or any European day-ahead prices. None of the EPF papers read for sections 2–3 (Lago et al., Ghelasi & Ziel, Steinert & Ziel, Maciejowska et al.) reports directional accuracy (searched their text for "direction", "sign of", "turning point").
+
+#### 7.6 Simulation of decision rules (measured here)
+
+**Model.**
+- Daily inventory: one car using 10 kWh per day, one charging opportunity per calendar day.
+- Each opportunity is priced at the actual mean of that day's 2 cheapest hours (spot,
+  DKK/MWh).
+- Each day, after the auction, the decision sets how much to charge at tomorrow's (published)
+  opportunity, from the forecasts for the 6 days after it.
+- Battery: at least one day's energy after charging; capacity 50 kWh (5 days), or 30 kWh in a
+  second run.
+- 23 decisions, issued 2026-10-06 to 2026-10-28. The energy left at the end is valued at the
+  period's mean opportunity price.
+
+**Rules.**
+- **Floor:** charge each day's need. This is within-day optimisation only.
+- **Oracle:** perfect foresight. Charge enough to last until the next *actually* cheaper day.
+- **Forecast next-cheaper + premium P:** the same rule, judged on forecast cheapest-hour
+  prices plus an additive P for forecast days.
+- **Trend switch:** if the forecast mean of D+2..D+6 exceeds the known D+1 mean by more than T,
+  fill to capacity (or to 3 days' worth); otherwise charge the floor.
+
+Average price paid, DKK/MWh, and the share of the oracle's saving over the floor:
+
+| Rule | DK1, 50 kWh | DK2, 50 kWh | DK1, 30 kWh | DK2, 30 kWh |
+|---|---|---|---|---|
+| Floor (charge each day's need) | 718 | 730 | 718 | 730 |
+| Oracle next-cheaper (actual prices) | 358 (100 %) | 372 (100 %) | 466 (100 %) | 475 (100 %) |
+| Forecast next-cheaper, P = 0 | 372 (96 %) | 403 (91 %) | 499 (87 %) | 527 (80 %) |
+| P = 50 | 369 (97 %) | 403 (91 %) | 496 (88 %) | 527 (80 %) |
+| P = 100 | 386 (92 %) | 384 (97 %) | 505 (85 %) | 508 (87 %) |
+| P = 150 / 200 | 386 (92 %) | 423 (86 %) | 505 (85 %) | 527 / 545 (80 / 73 %) |
+| P = 300 | 462 (71 %) | 437 (82 %) | 565 (61 %) | 541 (74 %) |
+| Trend switch, T = 0 → fill | 434 (79 %) | 444 (80 %) | 555 (65 %) | 550 (71 %) |
+| Trend switch, T = 100–200 → fill | 456 (73 %) | 444–464 (74–80 %) | 550 (67 %) | 550–573 (62–71 %) |
+| Trend switch, T = 100–200 → 3 days' worth | 550 (47 %) | 550–573 (44–50 %) | 550 (67 %) | 550–573 (62–71 %) |
+
+### Inferences
+- Reasoning: both views fit the same data.
+  - The level of a single forecast day is off by about 230–400 DKK/MWh MAE (section 2).
+  - In this window, though, days differed from one another by about 340 DKK/MWh on average.
+  - Section 5 showed the day-level part of the error was the larger part of each day's error;
+    even so, the *order* of days survives whenever the true differences between them are
+    larger than that error. That is why direction and ranking are good while levels are not,
+    and why direction is a coin flip for moves under ~100 DKK/MWh.
+  - In a calm period with small daily differences, direction hit rates would be lower. This
+    window cannot show it. Reasoning, not measured.
+- Reasoning: the threshold below which direction is noise lies between 100 and 300 DKK/MWh
+  in this sample (about 0.1–0.3 DKK/kWh on spot). It is of the same order as one forecast-day
+  MAE. A rule of thumb follows: "trust a predicted move larger than about one MAE of that
+  horizon." A dimensionless form keeps D3: a move larger than the provider's backtest MAE at
+  that horizon, or larger than the spread of the call's known prices.
+- Reasoning: the simulation says the useful content of the forecast is its **day ranking**,
+  used through the engine's ordinary cheapest-first choice (D22). A separate trend switch is
+  not needed:
+  - "Wait for the next cheaper day, else charge now" on forecast prices beat the binary
+    trend switch in all four cases. With P = 0 the margin was 9–21 points of oracle savings.
+  - The trend switch is too coarse. It fills fully even when a cheaper day lies two days
+    ahead, and it ignores dips inside a "rising" week.
+  - Ranking by the forecast is what the engine already does when forecast hours are in its
+    price list. The maintainer's signal is therefore best used by keeping forecasts in the
+    ranking, with a small markup, rather than by a separate trend rule.
+- Reasoning on the premium:
+  - In the simulation, P between 0 and about 100–150 DKK/MWh moved results by only 5–11 points
+    of oracle savings, best at 0–50 for DK1 and at 100 for DK2. That is noise-level for 23
+    decisions.
+  - P = 300 clearly cost money: 13–27 points below the best premium.
+  - This agrees with Lund (λ = 0 near-optimal; a full P90 premium costs) and with the
+    selection bias of about 120–160 DKK/MWh measured in section 5.
+  - The earlier suggestion of a first step of about one first-day MAE (≈150 DKK/MWh) is at the
+    upper edge of what this simulation tolerates. A first step of about half that is safer:
+    roughly 50–100 DKK/MWh, i.e. ≈0.05–0.10 DKK/kWh on DK spot, or about 0.3–0.6× the
+    first-forecast-day MAE.
+  - 23 decisions cannot separate 50 from 150. Never above about one MAE.
+- Reasoning on the maintainer's rule ("charge only the floor when falling by more than T;
+  charge up when rising by more than T"):
+  - Its *direction* is right; the simulated trend switch saved 62–80 % of the oracle saving
+    against the floor, across both battery sizes.
+  - It is dominated by the ranking rule.
+  - If the integration wants it, it should apply only above a move of roughly 200–300 DKK/MWh,
+    where direction hit rates were 79–95 % (DK1) and 59–87 % (DK2).
+  - It should charge up only to cover the days until the forecast cheaper day, not to full.
+- Reasoning for O1 (charge beyond the required floors when hours are cheap): the data favours
+  a variant over a fixed price threshold or a percentile:
+  - Charge beyond the floors only for days whose forecast price, plus the markup, is higher
+    than the known price now. That is, buy now what the coming days would otherwise buy
+    dearer, up to `default_target_soc`.
+  - This is the "forecast next-cheaper" rule. It recovered 80–97 % of perfect-foresight savings
+    in the simulation.
+  - It needs an assumed daily consumption beyond the known targets, which the engine does not
+    have. Today `min_idle_soc` and the targets carry that. So it is an argument to revisit O1
+    option (a), not a settled answer.
+
+### Gaps
+- Sample: 23 runs and 22–24 actual days in one month, with two dominant low-price episodes and
+  overlapping runs. The PT statistics assume independence they do not have. The threshold and
+  premium figures are indications only. A year of the elpriser archive (kept from 2026-10-06,
+  for 400 days) or of logged Carnot forecasts is needed.
+- Carnot, the forecast most Danish HA users have: not tested (no key). The maintainer's
+  experience may be with Carnot; whether it ranks days as well is unknown.
+- No calm-period data: how direction accuracy behaves when day-to-day moves are small (summer
+  plateaus, low wind variance) is not measured.
+- The simulation ignores the car's real schedule (targets, absences, D8 buffer) and uses the
+  2 cheapest hours as the day's price. The engine's own greedy plan over hours was not
+  simulated.
+- No published day-level directional accuracy for multi-day European price forecasts was found.
