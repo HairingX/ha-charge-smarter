@@ -4,7 +4,9 @@ A Home Assistant integration, installed through HACS, for EV charging orchestrat
 charger-agnostic: it works through the charger, price and solar integrations a Home Assistant
 already has (Easee, Zaptec, Wallbox, OCPP, go-e, Nord Pool, ...) rather than talking to hardware
 itself. Planned scope: solar surplus charging, spot price optimization, dynamic load balancing
-and calendar-aware scheduling. How and why it is built as it is: `docs/design.md`.
+and calendar-aware scheduling. How and why it is built as it is: `docs/design.md`. What the
+charging logic must do, the decisions taken and the questions still open: `docs/design/`, whose
+`decisions.md` is the record.
 
 ## This integration
 

@@ -15,6 +15,8 @@ the household's load. It talks to no hardware itself.
   owner's other integrations pin theirs.
 - Adapters translate other integrations' entities into what the logic needs, one per kind of
   charger, price or solar source.
+- The charging logic is not built yet. What it must do, the decisions behind it and the research
+  they rest on are in `design/`.
 
 ## How it is released
 
