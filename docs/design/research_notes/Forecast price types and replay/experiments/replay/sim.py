@@ -50,6 +50,7 @@ class Params:
         self.grid = 0.25
         self.soft_pen = 10.0
         self.start_kwh = 0.0
+        self.replan = 60        # minutes between re-plans (also at every plug-in)
         self.__dict__.update(kw)
 
 
@@ -154,13 +155,15 @@ class Info:
             else:
                 spot = A.spot[q]
             lt = A.loc[q]
-            if self.tariff_bug == "frozen":
+            flat = A.flat[q]
+            if self.tariff_bug == "frozen":     # tariff row and state charges of the planning date
                 tar = A.tariff_on(lt, D.local(t).date())
+                flat = A.flat_by_year.get(D.local(t).year, flat) if A.rows else flat
             elif self.tariff_bug:
                 tar = A.grid_tariff(lt, self.tariff_bug)
             else:
                 tar = A.tariff[q]
-            return (spot + tar + A.flat[q]) * D.VAT
+            return (spot + tar + flat) * D.VAT
         if self.quarter_rank or self.billing == "quarter":
             return A.total_q[q]
         return A.total_h[q]
@@ -437,6 +440,17 @@ def dp(slots, targets, caps, s0, car, P, on0=False):
 
 # ---------------------------------------------------------------- replay
 
+def _late_minutes(car, s, x, span):
+    """Minutes at full power needed to add x kWh from SoC s, at most span."""
+    n, mins = x, 0
+    while n > 1e-9 and mins < span:
+        d = min(car.batt(s) / 60.0, n)
+        s += d
+        n -= d
+        mins += 1
+    return mins
+
+
 def period(lt):
     h = lt.hour
     return "low" if h < 6 else ("peak" if 17 <= h < 21 else "high")
@@ -458,7 +472,7 @@ def replay(area, runs, sched_kind, seed, policy, start, end, car=None, P=None, b
     stats = dict(cost=0.0, wall=0.0, batt=0.0, misses=0, short_kwh=0.0, short_min=0.0, deps=0,
                  low_arrivals=0, h55=0.0, h60=0.0, starts=0, plan_ms=[], per_period={},
                  per_month={}, dst_cost=0.0, dst_wall=0.0)
-    cps = set(range(t0, t1, 60))
+    cps = set(range(t0, t1, P.replan))
     for x in trips:
         for m in (x.dep, x.ret):
             if t0 <= m < t1:
@@ -477,8 +491,8 @@ def replay(area, runs, sched_kind, seed, policy, start, end, car=None, P=None, b
     dst_days = {dt.date(2025, 10, 26), dt.date(2026, 3, 29), dt.date(2026, 10, 25)}
     oracle_plan_until = -1
 
-    def charge(a, b, x, limit=None):
-        """Deliver x battery kWh in [a, b), starting as late as possible (all of it if x is None)."""
+    def charge(a, b, x, limit=None, late=True):
+        """Deliver x battery kWh in [a, b), as late as possible unless late is False (all if x is None)."""
         nonlocal soc, last_on
         if b <= a:
             return
@@ -493,7 +507,7 @@ def replay(area, runs, sched_kind, seed, policy, start, end, car=None, P=None, b
             s += d
             n -= d
             mins += 1
-        st = a if x is None else b - mins
+        st = a if (x is None or not late) else b - mins
         for m in range(st, b):
             if need <= 1e-9 or soc >= car.cap - 1e-9:
                 break
@@ -577,8 +591,13 @@ def replay(area, runs, sched_kind, seed, policy, start, end, car=None, P=None, b
                     plan = {z[0]: (z[1], en[i]) for i, z in enumerate(slots) if en[i] > 1e-9}
                 for s in sorted(plan):
                     e, x = plan[s]
-                    if s >= a and s < b:
-                        charge(s, min(e, b), x if e <= b else x * (min(e, b) - s) / (e - s))
+                    if s < b and e > a:
+                        if s >= a and e <= b:
+                            charge(s, e, x)
+                        else:   # a slot cut by a re-plan: the part of its late-start run inside [a, b)
+                            lo = max(a, s, e - _late_minutes(car, soc, x, e - s))
+                            if min(e, b) > lo:
+                                charge(lo, min(e, b), x, late=False)
         dur = (b - a) / 60.0
         if soc > 0.55 * car.cap:
             stats["h55"] += dur
