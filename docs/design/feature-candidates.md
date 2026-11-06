@@ -14,14 +14,14 @@ Every feature considered for the charging logic, and where it stands. Status:
 | Feature | Status | Notes |
 |---|---|---|
 | Cheapest hours over the whole horizon | Accepted | D22 |
-| Uncertainty markup on forecast prices | Accepted, shape open | D20, O4 |
-| A confidence value per price (`confidence_upper`) | Open | Part of O4 |
+| Forecast prices used for their trend, anchored on known prices | Accepted | D33 |
+| A confidence value per price (`confidence_upper`) | Deferred | D33 uses the forecast's trend, not its band |
 | Negative prices | Accepted | D25 |
 | Time-of-use tariffs with fixed blocks | Deferred | The integration can flatten them into hourly prices |
 | Demand charges (cost per peak kW) | Deferred | Commercial tariffs |
 | Grid stress signals ("don't charge now") | Covered | An absence, or a price spike |
 | Carbon intensity, weighed against cost | Deferred | A second input series and a weight; a scoring concern (D14) |
-| Price slots shorter than an hour | Open | O11 |
+| Price slots of any length, mixed, priced as billed | Accepted | D35 |
 | Pluggable cost models (fixed fees and the like) | Deferred | |
 
 ## Battery and SoC
@@ -34,7 +34,7 @@ Every feature considered for the charging logic, and where it stands. Status:
 | Hard ceiling of the car `car_max_soc` | Accepted | D18 |
 | A global hard cap set by the user over every target | Rejected | R1 |
 | Forcing a top-up when SoC is near the requirement | Rejected | R2 |
-| Charging above the required floor in cheap hours | Open | O1 |
+| Charging above the required floor in cheap hours | Accepted, under a ceiling the user sets | D30, D36 |
 | Prefer 80 % over 100 % unless a target needs more | Covered | The caps (D7) |
 | Slower charging in the cold | Integration | Folded into the curves (D6) |
 | Prefer shallow cycles (30–70 %) | Deferred | Trades against feasibility |
@@ -82,7 +82,8 @@ Every feature considered for the charging logic, and where it stands. Status:
 
 | Feature | Status | Notes |
 |---|---|---|
-| Force a charge now | Integration | O12 |
+| Charge now to a level, e.g. 100 % | Integration, accepted | D37 |
+| A trip's need stated as distance, address or percentage, reached with margin | Accepted | D38, O14 |
 | Pause the plan ("not tonight") | Integration | An absence; O12 |
 | Notify when the car should charge but does not | Integration | |
 | Costs in the user's currency | Integration | |

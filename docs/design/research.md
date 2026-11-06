@@ -45,3 +45,48 @@ The report proposes; `decisions.md` records what is decided. Until a proposal is
 
 What remains to be measured, mostly from the maintainer's own Home Assistant data, is listed at
 the end of the report.
+
+## Logging the Carnot forecast
+
+D33 is calibrated on elpriser.org's forecast; the maintainer uses Carnot through the Energi Data
+Service integration, which keeps the forecast out of Home Assistant's recorder, so no history of
+it exists. Calling Carnot from here would spend the maintainer's rate-limited key. Instead, his
+Home Assistant writes every forecast it receives to a file, and the actual prices come from Energi
+Data Service's public API.
+
+1. In `configuration.yaml`, allow the folder, create `/config/charge_logs`, and restart:
+
+   ```yaml
+   homeassistant:
+     allowlist_external_dirs:
+       - /config/charge_logs
+   ```
+
+2. Add the **File** integration as a notification service writing to
+   `/config/charge_logs/carnot_forecast.jsonl`.
+
+3. Add this automation, with the price sensor and the File notify entity of the installation:
+
+   ```yaml
+   alias: Log Carnot forecast
+   triggers:
+     - trigger: state
+       entity_id: sensor.energi_data_service
+       attribute: forecast
+   actions:
+     - action: notify.send_message
+       target:
+         entity_id: notify.file
+       data:
+         message: >-
+           {{ {"logged_at": now().isoformat(),
+               "forecast": state_attr('sensor.energi_data_service', 'forecast'),
+               "raw_today": state_attr('sensor.energi_data_service', 'raw_today'),
+               "raw_tomorrow": state_attr('sensor.energi_data_service', 'raw_tomorrow')} | to_json }}
+   mode: queued
+   ```
+
+It writes one line each time the forecast changes, so the last line before each day's publication
+is the forecast D33 anchors on. The automation has not been tried on a real installation. After
+three to four weeks the file is enough to measure Carnot's bias and test D33 on it, as the notes
+in `research_notes/Forecast price types and replay/` did for elpriser.org.

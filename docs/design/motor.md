@@ -57,7 +57,7 @@ base classes or strategy objects until a second implementation exists (D14).
 | `validation` | The API layer: checks and corrections |
 | `charging_model` | Simulating a charge: SoC, time and the power curves to energy and SoC over time |
 | `windows` | Finding the hours available for charging: absences and price data |
-| `scoring` | Ranking hours: today the price with the forecast markup; later carbon, solar, battery wear |
+| `scoring` | Ranking slots: today by price; later carbon, solar, battery wear |
 | `trip_chain` | The SoC chain across absences, required SoC per target, the up-front feasibility check |
 | `planner` | `plan()`: the decision order and assembly of the output |
 
@@ -92,14 +92,15 @@ the session) × efficiency`.
 
 | Field | Meaning |
 |---|---|
-| `default_target_soc` | The normal ceiling, e.g. 80. A soft limit: exceeded only where a target's own cap allows it |
+| `default_target_soc` | The normal ceiling, e.g. 80. A soft limit: exceeded only where a target's own cap allows it, or for energy bought ahead under `cheap_charge_max_soc` |
+| `cheap_charge_max_soc` | The ceiling for energy bought ahead because it is cheaper now than in the coming days, e.g. 90. Higher saves more and wears the battery more (D30) |
 | `min_safety_soc` | Below this the car charges at once, whatever the price |
-| `min_idle_soc` | With nothing planned, keep the car at least this full, charged in cheap hours |
-| `default_arrival_soc` | Default for the SoC wanted on return from an absence, e.g. 15 (`default_trip_buffer_soc` in `sources/`) |
-| `charge_complete_buffer_minutes` | Charging is planned to finish this long before each target; default 20. Covers a slow charge on a cold day, a tired battery, and unplugging before leaving. Global; per target later if needed (D8) |
+| `min_idle_soc` | With nothing planned, keep the car at least this full, charged in cheap hours. Default 40 (D31) |
+| `default_arrival_soc` | Default for the SoC wanted on return from an absence. The integration passes its summer or its larger winter value (D32) (`default_trip_buffer_soc` in `sources/`) |
+| `charge_complete_buffer_minutes` | Charging is planned to finish this long before each target; default 20. Covers a slow charge on a cold day, a tired battery, and unplugging before leaving. Global; per target later if needed (D8, D32) |
 
 Recommended order, documented but not enforced: `min_safety_soc ≤ min_idle_soc ≤
-default_target_soc`.
+default_target_soc ≤ cheap_charge_max_soc ≤ car_max_soc`.
 
 ### 4.4 Schedule
 
@@ -117,9 +118,12 @@ arrival SoC for an absence is stated is open (O2).
 
 ### 4.5 Prices
 
-`PricePoint(start, price, is_forecast=False)`, one per hour (sub-hour slots are a later
-question). Known prices and forecasts arrive in the same list; `is_forecast` tells them apart. The
-API layer sorts them and checks they form a continuous series.
+`PricePoint(start, end, price, kind)`, where `kind` is `KNOWN` (a published price) or `EXPECTED`
+(derived from a forecast, 6.4). Slots may be of any length, mixed: the integration passes the price
+of the period the user is billed for, the hourly mean of the quarters under hourly billing and the
+quarters under quarter-hour billing. Grid company and bidding zone are the integration's settings;
+the engine knows neither (D35). The API layer sorts the slots and checks they form a continuous
+series.
 
 ### 4.6 Tunables (all with defaults, all overridable)
 
@@ -131,7 +135,6 @@ API layer sorts them and checks they form a continuous series.
 | `idle_planning_horizon_hours` | 24 | Deadline for reaching `min_idle_soc` with nothing planned |
 | `simulation_step_minutes` | 6 (3 proposed) | Resolution of the charge simulation: precision against speed |
 | `min_session_kwh` | 2.0 | A soft minimum per session: skipped when below, unless a target requires it or charging later costs more (D19) |
-| `forecast_markup_steps` | not decided | Uncertainty markup on forecast prices by hours ahead (D20, O4) |
 
 ## 5. Output
 
@@ -140,7 +143,7 @@ API layer sorts them and checks they form a continuous series.
 | `should_charge_now` | True when a window covers `now` |
 | `reason` | `PlanReason`, below |
 | `feasibility` | `FULL`, `PARTIAL` or `INFEASIBLE`, the worst of the target results |
-| `windows` | Chronological `ChargeWindow(start, end, target_soc, expected_kwh, expected_cost, avg_price, requires_wakeup)`. Cost and average price use the raw prices, never the marked-up ones |
+| `windows` | Chronological `ChargeWindow(start, end, target_soc, expected_kwh, expected_cost, avg_price, requires_wakeup)`. Cost and average price use the prices as given, known or expected |
 | `actions` | Chronological `PlannerAction(type, execute_at, params)`: `START_CHARGING`, `STOP_CHARGING`, `WAKE_UP_CAR`, `SET_CHARGE_LIMIT {soc_limit}`, `REQUEST_SOC_REFRESH` |
 | `target_results` | Per target: status (`FULLY_MET`, `PARTIAL`, `INFEASIBLE`), planned SoC at the target, expected SoC on return, margin to the arrival SoC (`TripResult` in `sources/`) |
 | `warnings` | `PlannerWarning(code, subject, params)`. Each code has a fixed schema for `params` (D21) |
@@ -190,14 +193,19 @@ it must have:
 The result is a hard floor per target. If the floors add up to more than the available hours can
 deliver, the engine reports `INFEASIBLE_TRIP_CHAIN` here, before searching (D23).
 
-**Pass 2, cheapest hours.** Take every hour in which the car can charge (not in an absence, not in
-the buffer before a target, within the price data). Rank them by marked-up price. Take hours
-cheapest first and give each to the earliest target still short whose deadline it precedes,
-until every floor is met. The charge in each hour is simulated with the power curves (6.3), so
-a later hour at high SoC delivers less than an early one.
+**Pass 2, cheapest slots.** Take every slot in which the car can charge (not in an absence, not in
+the buffer before a target, within the price data). Rank them by price, known or expected. Take
+slots cheapest first and give each to the earliest target still short whose deadline it precedes,
+until every floor is met. The charge in each slot is simulated with the power curves (6.3), so a
+later slot at high SoC delivers less than an early one. Where the last slot needed is only partly
+used, the partly used slot is the most expensive one chosen, and it starts late; between equal
+prices the later slot wins (D34).
 
 A plan with a main charge and a late top-up is then just one possible result, not a special
-case. Whether to charge beyond the floors when hours are cheap is open (O1).
+case. Plugging in never fills to `default_target_soc` by itself: the engine buys what the targets
+need, in their cheapest slots. Energy beyond that is bought only below `cheap_charge_max_soc`, and
+only in slots cheaper than the later ones it replaces (D30). The coming days' need reaches the
+engine as ordinary targets, from the calendar's entries over the whole horizon (D36).
 
 **Limits applied throughout:**
 
@@ -205,9 +213,10 @@ case. Whether to charge beyond the floors when hours are cheap is open (O1).
   `car_max_soc`. The engine never plans above it. When the need exceeds the cap, it plans to the
   cap and reports `PARTIAL` with `TRIP_REQUIRED_EXCEEDS_CAP`: the user chose the cap, perhaps
   knowing they can charge on the way (D7).
-- **Buffer.** No charging in `[target.at − charge_complete_buffer_minutes, target.at]`. Short of
-  time, the engine plans up to the buffer and reports `PARTIAL` or `INFEASIBLE` with
-  `INSUFFICIENT_TIME_WITH_BUFFER` (D8).
+- **Buffer.** No charging is planned in `[target.at − charge_complete_buffer_minutes, target.at]`
+  (D8). When the car is still short of the target as the buffer begins, it keeps charging until
+  departure, because the trip comes first; a shortfall left at departure is reported as `PARTIAL`
+  or `INFEASIBLE` with `INSUFFICIENT_TIME_WITH_BUFFER` (D32).
 - **Absences.** An hour overlapping an absence is not available. An hour starting exactly at an
   absence's end is.
 - **Session limit.** No window delivers more than `charger_max_session_kwh`.
@@ -219,18 +228,26 @@ Step through the window at `simulation_step_minutes`. At each step take
 efficiency`, add the energy, update SoC. The result is an approximation, accepted for the sake of
 speed and of needing nothing beyond the standard library.
 
-### 6.4 Forecast prices (D20)
+### 6.4 Forecast prices (D33)
 
-Choosing hours uses a marked-up price; costs reported use the raw one.
+A forecast misses both above and below, but its trend holds: when it falls over the coming days,
+prices fall. So a forecast is never compared with a known price. Instead, the change the forecast
+predicts is added to a price that is known:
 
 ```
-adjusted_price = price × (1 + markup / 100)
-markup         = 0                                         for a known price
-markup         = step value for the hours ahead            for a forecast
+expected(slot) = known(anchor) + forecast(slot) − forecast(anchor)
 ```
 
-A forecast only wins when it is cheaper by more than its markup, and the further ahead, the
-larger the markup. The shape of the markup and its defaults are open (O4).
+- `anchor` is the latest published day. `forecast(anchor)` is what the same forecast run said
+  about that day before its prices were published.
+- The change is worked on the spot part; tariffs and taxes, which are known in advance, are added
+  afterwards.
+- Trust in the change fades with distance: the further a slot lies beyond the anchor, the more of
+  the change is discounted. In the one month measured, about four days.
+
+The engine does none of this. The integration keeps the forecast run it held before each
+publication, and a pure helper in the library turns forecasts into `EXPECTED` prices before the
+call. The engine sees only `KNOWN` and `EXPECTED` slots.
 
 ## 7. Performance
 
