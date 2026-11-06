@@ -83,6 +83,7 @@ Every feature considered for the charging logic, and where it stands. Status:
 | Feature | Status | Notes |
 |---|---|---|
 | Charge now to a level, e.g. 100 % | Integration, accepted | D37 |
+| A trip's need stated as distance, address or percentage, reached with margin | Accepted | D38, O14 |
 | Pause the plan ("not tonight") | Integration | An absence; O12 |
 | Notify when the car should charge but does not | Integration | |
 | Costs in the user's currency | Integration | |
