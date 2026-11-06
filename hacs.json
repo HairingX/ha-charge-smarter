@@ -1,6 +1,6 @@
 {
   "name": "ChargeSmarter",
-  "homeassistant": "2026.10.4",
+  "homeassistant": "2026.11.0",
   "zip_release": true,
   "filename": "charge_smarter.zip"
 }

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.charge_smarter.const import DOMAIN
 
