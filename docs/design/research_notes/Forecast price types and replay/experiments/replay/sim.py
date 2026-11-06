@@ -366,9 +366,12 @@ def _bisect(a, x):
 # ---------------------------------------------------------------- planners
 
 def greedy(slots, targets, caps, s0, car):
-    """Cheapest first, each slot to the earliest unmet target (D22 with N4's partial slot).
+    """Cheapest first under nested deadlines (D22 with N4's partial slot).
 
-    Capacity per slot is taken at the lowest power the car may draw (conservative under taper).
+    Targets are served earliest deadline first; each takes the cheapest free slots before its
+    deadline (ties to the later slot), which for nested deadlines selects the same set as
+    cheapest-first over the horizon. Soft targets may not lift SoC above their cap. Capacity per
+    slot is taken at the lowest power the car may draw (conservative under taper).
     """
     T = len(slots)
     if not targets:
@@ -384,30 +387,20 @@ def greedy(slots, targets, caps, s0, car):
         s -= cons[i]
         soc_end[i] = s
     e = [0.0] * T
-
-    def before(j):
-        return s0 if j == 0 else soc_end[j - 1]
-
-    order = sorted((i for i in range(T) if capa[i] > 0), key=lambda i: (slots[i][2], -i))
-    for i in order:
-        for (j, R, E, hard) in targets:
-            if j <= i:
-                continue
-            short = R - before(j)
+    for (j, R, E, hard) in targets:
+        cand = sorted((i for i in range(min(j, T)) if capa[i] - e[i] > 1e-9),
+                      key=lambda i: (slots[i][2], -i))
+        for i in cand:
+            short = R - (s0 if j == 0 else soc_end[j - 1])
             if short <= 1e-9:
-                continue
-            head = INF
-            for k in range(i, T):
-                c = car.cap if hard else caps[k]
-                head = min(head, c - soc_end[k])
+                break
+            head = min((car.cap if hard else caps[k]) - soc_end[k] for k in range(i, min(j, T)))
             x = min(capa[i] - e[i], short, head)
             if x <= 1e-9:
                 continue
             e[i] += x
             for k in range(i, T):
                 soc_end[k] += x
-            if capa[i] - e[i] <= 1e-9:
-                break
     return e
 
 
@@ -424,7 +417,8 @@ def dp(slots, targets, caps, s0, car, P, on0=False):
     fs = []
     for i, z in enumerate(slots):
         L = round((z[1] - z[0]) / 5) / 12.0
-        fs.append((L, z[2], z[3], caps[i]))
+        cap = caps[i] if caps[i] >= car.cap else min(car.cap, math.ceil(caps[i] / P.grid - 1e-9) * P.grid)
+        fs.append((L, z[2], z[3], cap))
     ev = {}
     for (j, R, E, hard) in targets:
         if j >= T:
