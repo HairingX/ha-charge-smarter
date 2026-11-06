@@ -82,7 +82,7 @@ Every feature considered for the charging logic, and where it stands. Status:
 
 | Feature | Status | Notes |
 |---|---|---|
-| Force a charge now | Integration | O12 |
+| Charge now to a level, e.g. 100 % | Integration, accepted | D37 |
 | Pause the plan ("not tonight") | Integration | An absence; O12 |
 | Notify when the car should charge but does not | Integration | |
 | Costs in the user's currency | Integration | |

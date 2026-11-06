@@ -55,6 +55,7 @@ maintainer's request. Open questions are at the end; answer them by ID.
 | D34 | Hours are chosen by the corrected greedy: the partly used slot is the most expensive one chosen, and it starts late; between equal prices the later slot wins. The exact dynamic programme is kept as a test oracle | The end-to-end replay found no money between them on Danish prices, and the greedy is simpler and faster |
 | D35 | Prices come in slots with a start and an end, of any length, mixed. The integration passes the price of the period the user is billed for: the hourly mean of the quarters under hourly billing, the quarters under quarter-hour billing. Grid company and bidding zone are settings of the integration; the engine knows neither | The maintainer is billed per hour today, quarter-hour billing is coming, and the integration must work for any grid company and market |
 | D36 | The driving schedule comes from a Home Assistant calendar in which every day's driving is entered. The integration reads it over the whole price and forecast horizon and turns each entry into an absence and a target, so the coming days' need reaches the engine as ordinary targets. Driving that is not in the calendar is not guessed | The maintainer enters every day's driving in a calendar. Entered trips are more reliable than a guess from past consumption, and they let D30 buy ahead for known days |
+| D37 | Charging to 100 %, or to any level above the planned one, is a manual action in the integration that goes around the planner: it charges now to the level asked for, and the planner takes over again afterwards. The planner itself never plans above `default_target_soc` or `cheap_charge_max_soc` for a trip | The maintainer wants a full battery only on some days, and decides that himself; the planner stays simple and predictable |
 
 ### Rejected
 
@@ -86,5 +87,5 @@ maintainer's request. Open questions are at the end; answer them by ID.
 | O8 | Default of `simulation_step_minutes` | 6, or 3 for precision; to be measured against the 10 ms budget |
 | O9 | With main and top-up no longer separate, is `is_top_up` on `ChargeWindow` still needed, and when is `SET_CHARGE_LIMIT` emitted? | |
 | O10 | Further validation | Refuse `min_safety_soc > min_idle_soc`; warn on `min_idle_soc > default_target_soc` (forces charging above the default before every target); skip with a warning a target whose buffer starts in the past |
-| O12 | Manual controls: force a charge now, pause the plan | In the integration, not the engine; not designed |
-| O14 | How a calendar entry states its trip: distance or energy, the SoC wanted on arrival, its own cap, and an entry that is only a deadline | The engine takes energy or SoC (D3); the integration converts distance with the car's consumption |
+| O12 | Manual controls besides D37: pause the plan | In the integration, not the engine; not designed |
+| O14 | How a calendar entry states its trip: distance or energy, the SoC wanted on arrival, and an entry that is only a deadline. A full charge is not part of an entry (D37) | The engine takes energy or SoC (D3); the integration converts distance with the car's consumption |
