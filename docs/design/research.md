@@ -15,6 +15,8 @@ marked as reasoning.
 | [reports/Cheapest home EV charging.md](reports/Cheapest%20home%20EV%20charging.md) | The synthesis: how to charge cheapest in Denmark, a verdict on every decision and open question, proposed new decisions, and what remains to be measured |
 | [research_notes/Cheapest home EV charging/](research_notes/Cheapest%20home%20EV%20charging/) | Seven specialist notes (prices, forecasts, charging physics, the algorithm, existing software, Home Assistant, driver behaviour) and five panel papers that weigh them against each other, one of them an audit that re-checked 28 claims at their sources |
 | `research_notes/Cheapest home EV charging/experiments/` | The scripts behind the measured numbers. The price data they read is public and not kept |
+| [reports/Forecast price types and replay.md](reports/Forecast%20price%20types%20and%20replay.md) | The follow-up: an independent review of the first report and of the price calculation end to end, the measured forecast bias and how to use a biased forecast (known, expected and trend prices), an end-to-end replay with only the information the engine has at each moment, and support for any place and settlement period. It updates the first report's decision register |
+| [research_notes/Forecast price types and replay/](research_notes/Forecast%20price%20types%20and%20replay/) | The three notes behind it, with their scripts |
 
 The report proposes; `decisions.md` records what is decided. Until a proposal is taken into
 `decisions.md`, the decision there stands.
