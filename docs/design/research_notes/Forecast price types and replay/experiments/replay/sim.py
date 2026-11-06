@@ -420,7 +420,13 @@ def dp(slots, targets, caps, s0, car, P, on0=False):
     fs = []
     for i, z in enumerate(slots):
         L = round((z[1] - z[0]) / 5) / 12.0
-        cap = caps[i] if caps[i] >= car.cap else min(car.cap, math.ceil(caps[i] / P.grid - 1e-9) * P.grid)
+        # A ceiling rounds down to the grid; a hard target's level rounds up so that it stays reachable.
+        if caps[i] >= car.cap:
+            cap = caps[i]
+        elif abs(caps[i] - P.ceiling * car.cap) < 1e-9:
+            cap = math.floor(caps[i] / P.grid + 1e-9) * P.grid
+        else:
+            cap = min(car.cap, math.ceil(caps[i] / P.grid - 1e-9) * P.grid)
         fs.append((L, z[2], z[3], cap))
     ev = {}
     for (j, R, E, hard) in targets:
