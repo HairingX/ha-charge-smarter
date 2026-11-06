@@ -34,7 +34,7 @@ Every feature considered for the charging logic, and where it stands. Status:
 | Hard ceiling of the car `car_max_soc` | Accepted | D18 |
 | A global hard cap set by the user over every target | Rejected | R1 |
 | Forcing a top-up when SoC is near the requirement | Rejected | R2 |
-| Charging above the required floor in cheap hours | Accepted, under a ceiling the user sets | D30, O13 |
+| Charging above the required floor in cheap hours | Accepted, under a ceiling the user sets | D30, D36 |
 | Prefer 80 % over 100 % unless a target needs more | Covered | The caps (D7) |
 | Slower charging in the cold | Integration | Folded into the curves (D6) |
 | Prefer shallow cycles (30–70 %) | Deferred | Trades against feasibility |

@@ -204,8 +204,8 @@ prices the later slot wins (D34).
 A plan with a main charge and a late top-up is then just one possible result, not a special
 case. Plugging in never fills to `default_target_soc` by itself: the engine buys what the targets
 need, in their cheapest slots. Energy beyond that is bought only below `cheap_charge_max_soc`, and
-only in slots cheaper than the later ones it replaces (D30). How the coming days' expected need is
-stated to the engine is open (O13).
+only in slots cheaper than the later ones it replaces (D30). The coming days' need reaches the
+engine as ordinary targets, from the calendar's entries over the whole horizon (D36).
 
 **Limits applied throughout:**
 
