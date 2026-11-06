@@ -19,6 +19,8 @@ import fulldp as F  # noqa: E402
 import data as D    # noqa: E402
 
 INF = float("inf")
+# False reproduces the first runs, where every partly used slot started late even after a full one.
+START_CONTINUES = os.environ.get("REPLAY_LATE_ALWAYS") is None
 
 
 class Car:
@@ -595,11 +597,15 @@ def replay(area, runs, sched_kind, seed, policy, start, end, car=None, P=None, b
                         en = dp(slots, tg, caps, soc, car, P, on0=(last_on == a - 1))
                     stats["plan_ms"].append((time.perf_counter() - tt) * 1000)
                     plan = {z[0]: (z[1], en[i]) for i, z in enumerate(slots) if en[i] > 1e-9}
+                ends = {v[0] for v in plan.values()}
                 for s in sorted(plan):
                     e, x = plan[s]
                     if s < b and e > a:
                         if s >= a and e <= b:
-                            charge(s, e, x)
+                            # A slot that continues a running session starts at once; only the
+                            # first slot of a session starts late (N4).
+                            cont = s in ends or last_on == s - 1
+                            charge(s, e, x, late=not (cont and START_CONTINUES))
                         else:   # a slot cut by a re-plan: the part of its late-start run inside [a, b)
                             lo = max(a, s, e - _late_minutes(car, soc, x, e - s))
                             if min(e, b) > lo:

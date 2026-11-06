@@ -1,6 +1,8 @@
 """Tables from the JSON lines that run.py writes.
 
-    python3 summarise.py RESULTS.jsonl [more.jsonl ...]
+    python3 summarise.py RESULTS.jsonl [more.jsonl ...] [--variants]
+
+With --variants it prints, instead of the tables, each variant's paired change against the base run.
 
 Costs are DKK incl. VAT. "adj" values the difference between the start and end SoC at the
 perfect-foresight policy's (P7) average price per battery kWh in the same run group, so that
@@ -13,9 +15,10 @@ from collections import defaultdict
 
 rows = []
 for f in sys.argv[1:]:
-    rows += [json.loads(line) for line in open(f)]
+    if not f.startswith("--"):
+        rows += [json.loads(line) for line in open(f)]
 
-VARIANT_KEYS = ("taper", "replan", "idle", "buffer", "pub")
+VARIANT_KEYS = ("taper", "replan", "idle", "buffer", "pub", "grid")
 
 
 def variant(r):
@@ -83,7 +86,58 @@ def periods(area, billing, win, var, pols):
                                                          st.mean(r["dst_wall"] for r in rs)))
 
 
-if __name__ == "__main__":
+def variants():
+    """Paired change of each variant against the base run of the same policy, schedule and seed."""
+    base = {(r["area"], r["billing"], r["win"], r["sched"], r["seed"], r["pol"]): r
+            for r in rows if variant(r) == "base"}
+    if any(r.get("pub") == "13" for r in rows):
+        for r in rows:
+            if r.get("pub") == "13":
+                base[(r["area"], r["billing"], r["win"], r["sched"], r["seed"], r["pol"])] = r
+    out = defaultdict(list)
+    for r in rows:
+        v = variant(r)
+        if v == "base" or v == "pub=13":
+            continue
+        b = base.get((r["area"], r["billing"], r["win"], r["sched"], r["seed"], r["pol"]))
+        if b:
+            out[(r["area"], r["billing"], r["win"], v, r["pol"], r["sched"])].append(
+                (r["adj"] - b["adj"], r["starts"] - b["starts"], r["h55"] - b["h55"], r["misses"] - b["misses"]))
+    print("\n### Variants against the base run (paired by schedule and seed)")
+    print("| Area | Billing | Window | Variant | Policy | Schedule | n | DKK | starts | h>55% | misses |")
+    print("|---|---|---|---|---|---|---|---|---|---|---|")
+    for k in sorted(out):
+        v = out[k]
+        print("| %s | %s | %s | %s | %s | %d | %d | %+.1f | %+.1f | %+.0f | %+.1f |" % (
+            k + (len(v), st.mean(x[0] for x in v), st.mean(x[1] for x in v), st.mean(x[2] for x in v),
+                 st.mean(x[3] for x in v))))
+
+
+def billing():
+    """Paired change from hourly to quarter-hour billing, same policy, schedule and seed."""
+    key = lambda r: (r["area"], r["win"], r["sched"], r["seed"], r["pol"], variant(r))
+    hour = {key(r): r for r in rows if r["billing"] == "hour"}
+    out = defaultdict(list)
+    for r in rows:
+        if r["billing"] == "quarter" and key(r) in hour:
+            h = hour[key(r)]
+            out[(r["area"], r["win"], r["pol"], r["sched"])].append(
+                (r["adj"] - h["adj"], r["wall"] - h["wall"], r["starts"] - h["starts"], h["plan_mean"],
+                 r["plan_mean"], r["plan_p95"], r["plan_max"]))
+    print("\n### Quarter-hour against hourly billing (paired; adjusted cost)")
+    print("| Area | Window | Policy | Schedule | n | DKK | wall kWh | starts | plan ms hourly | plan ms quarter mean/p95/max |")
+    print("|---|---|---|---|---|---|---|---|---|---|")
+    for k in sorted(out):
+        v = out[k]
+        print("| %s | %s | %s | %d | %d | %+.1f | %+.1f | %+.1f | %.1f | %.1f/%.1f/%.1f |" % (
+            k + (len(v),) + tuple(st.mean(x[i] for x in v) for i in range(6)) + (max(x[6] for x in v),)))
+
+
+if __name__ == "__main__" and "--billing" in sys.argv:
+    billing()
+elif __name__ == "__main__" and "--variants" in sys.argv:
+    variants()
+elif __name__ == "__main__":
     combos = sorted({(g[0], g[1], g[2], g[5]) for g in by})
     for area, billing, win, var in combos:
         pols = sorted({p for g in by if (g[0], g[1], g[2], g[5]) == (area, billing, win, var) for p in by[g]},

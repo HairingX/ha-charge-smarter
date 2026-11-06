@@ -28,6 +28,10 @@ POL = {
     "P3_step": dict(kind="greedy", info="forecast", soft=True, ceiling=True, markup=[(0, 0.08), (48, 0.10)]),
     "P3_c55": dict(kind="greedy", info="forecast", soft=True, ceiling=True, markup=0.08, ceil=0.55),
     "P3_noceil": dict(kind="greedy", info="forecast", soft=True, ceiling=False, markup=0.08),
+    "P3_noceil_m0": dict(kind="greedy", info="forecast", soft=True, ceiling=False, markup=0.0),
+    "P3_noceil_m020": dict(kind="greedy", info="forecast", soft=True, ceiling=False, markup=0.20),
+    "P4_noceil": dict(kind="greedy", info="forecast", soft=True, ceiling=False, markup=0.0, bias="rolling"),
+    "P5_noceil": dict(kind="greedy", info="forecast", soft=True, ceiling=False, markup=0.0, bias="anchor"),
     "P4_m0": dict(kind="greedy", info="forecast", soft=True, ceiling=True, markup=0.0, bias="rolling"),
     "P4_m008": dict(kind="greedy", info="forecast", soft=True, ceiling=True, markup=0.08, bias="rolling"),
     "P5_m0": dict(kind="greedy", info="forecast", soft=True, ceiling=True, markup=0.0, bias="anchor"),
@@ -35,6 +39,7 @@ POL = {
     "P6a": dict(kind="dp"),
     "P6b": dict(kind="dp", info="forecast", soft=True, ceiling=True, markup=0.08),
     "P6b_start": dict(kind="dp", info="forecast", soft=True, ceiling=True, markup=0.08, start_kwh=0.3),
+    "P6a_start": dict(kind="dp", start_kwh=0.3),
     "P7": dict(kind="oracle"),
     "P7c": dict(kind="oracle", ceiling=True),
     # deliberate composition faults, executed with correct billing
@@ -106,6 +111,37 @@ def tasks(name):
                     out.append(dict(area="DK1", billing="hour", sched=k, seed=s, pol=p, win="fc", idle=0.5))
                     out.append(dict(area="DK1", billing="hour", sched=k, seed=s, pol=p, win="fc", buffer=60))
                     out.append(dict(area="DK1", billing="hour", sched=k, seed=s, pol=p, win="fc", replan=15))
+    elif name == "extra":
+        for area in ("DK1",):
+            for k in (1, 2, 3):
+                for s in SEEDS[:5]:
+                    for p in ["P6a_start", "P6b_start"]:
+                        out.append(dict(area=area, billing="quarter", sched=k, seed=s, pol=p, win="fc"))
+                    out.append(dict(area=area, billing="hour", sched=k, seed=s, pol="P6a_start", win="fc"))
+                    for p in ["P6b", "P6a"]:
+                        out.append(dict(area=area, billing="hour", sched=k, seed=s, pol=p, win="fc", grid=0.33))
+                    for p in ["P3_noceil_m0", "P3_noceil_m020", "P4_noceil", "P5_noceil"]:
+                        out.append(dict(area=area, billing="hour", sched=k, seed=s, pol=p, win="fc"))
+                        out.append(dict(area="DK2", billing="hour", sched=k, seed=s, pol=p, win="fc"))
+                    out.append(dict(area="DK2", billing="hour", sched=k, seed=s, pol="P3_noceil", win="fc"))
+    elif name == "grid":
+        # SoC grid 9.9/40 kWh: a whole number of steps per quarter at full power
+        for k in (1, 2, 3):
+            for s in SEEDS[:5]:
+                for p in ["P6a", "P6b", "P7"]:
+                    out.append(dict(area="DK1", billing="quarter", sched=k, seed=s, pol=p, win="fc", grid=0.2475))
+                for p in ["P6a", "P7"]:
+                    out.append(dict(area="DK1", billing="hour", sched=k, seed=s, pol=p, win="fc", grid=0.2475))
+    elif name == "starts":
+        # charge starts with a partly used slot continuing a running session
+        for billing in ("hour", "quarter"):
+            for k in (1, 2, 3):
+                for s in SEEDS[:5]:
+                    for p in ["P1", "P2", "P3_m008", "P6a", "P6a_start", "P6b", "P6b_start", "P7"]:
+                        out.append(dict(area="DK1", billing=billing, sched=k, seed=s, pol=p, win="fc"))
+                for s in SEEDS[:3]:
+                    for area in ("DK1", "DK2", "SE3"):
+                        out.append(dict(area=area, billing=billing, sched=k, seed=s, pol="P2", win="year"))
     return out
 
 
@@ -128,7 +164,7 @@ def work(arg):
             kw[k] = pol[k]
     if "ceil" in pol:
         kw["ceiling"] = pol["ceil"]
-    for k in ("idle", "buffer", "replan"):
+    for k in ("idle", "buffer", "replan", "grid"):
         if k in t:
             kw[k] = t[k]
     if t.get("pub") == "skip":
